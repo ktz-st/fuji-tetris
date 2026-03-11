@@ -201,21 +201,25 @@ begin
 end;
 
 procedure FastFall;
+var targetY: byte;
 begin
+    // Wyczyść stare pozycje
     DrawBlock(prevX1,prevY1,prevTile1,prevRotation1,0);
     DrawBlock(prevX2,prevY2,prevTile2,prevRotation2,0);
     SwapScreen;
     DrawBlock(prevX1,prevY1,prevTile1,prevRotation1,0);
     DrawBlock(prevX2,prevY2,prevTile2,prevRotation2,0);
-    while CanMoveBlock(tileX,tileY+1,currentTile,rotation) do begin
-        DrawBlock(tileX,tileY,currentTile,rotation,0);
-        tileY := tileY + 1;
-        DrawBlock(tileX,tileY,currentTile,rotation,1);
-        tileY := tileY - 1;
-        SwapScreen;
-        DrawBlock(tileX,tileY,currentTile,rotation,0);
-        tileY := tileY + 1;
-        DrawBlock(tileX,tileY,currentTile,rotation,1);
-    end;
+
+    // Znajdź docelową pozycję
+    targetY := tileY;
+    while CanMoveBlock(tileX, targetY + 1, currentTile, rotation) do
+        Inc(targetY);
+    tileY := targetY;
+
+    // Narysuj klocek na obu ekranach
+    DrawBlock(tileX, tileY, currentTile, rotation, 1);
+    SwapScreen;
+    DrawBlock(tileX, tileY, currentTile, rotation, 1);
+
     fallcounter := 0;
 end;

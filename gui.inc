@@ -145,28 +145,6 @@ begin
     DrawPixel(SCREEN_LOG, @coords, color);
 end;
 
-procedure NeoDrawLineH(x, y, w, color: integer);
-var
-    i, x1: integer;
-begin
-    i := x;
-    repeat
-        NeoDrawPixel(i, y, color);
-        Inc(i);
-    until i = x+w;
-end;
-
-procedure NeoDrawLineV(x, y, h, color: integer);
-var
-    i: integer;
-begin
-    i := y;
-    repeat
-        NeoDrawPixel(x, i, color);
-        Inc(i);
-    until i = y+h;
-end;
-
 procedure NeoDrawRect(x1,y1,x2,y2,color:word);
 var
     box: sGraphicRect;
@@ -336,7 +314,6 @@ begin
     NeoDrawString(WELL_LEFT+9,WELL_TOP+62,8,s);
     NeoDrawString(WELL_LEFT+9,WELL_TOP+72,8,s2);
 end;
-
 
 procedure SaveBackground(x,y,w,h:word;dst:pbyte);
 var px,py:word;

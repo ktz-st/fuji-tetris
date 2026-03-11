@@ -3,3 +3,6 @@ storage
 memory.dump
 *.lst
 *.a65
+GPATH
+GTAGS
+GRTAGS

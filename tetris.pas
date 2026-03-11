@@ -65,8 +65,6 @@ var
 {$ENDIF}
     current_tune: byte;
     MUSIC: pointer;
-    start_music: pointer;
-    music_length: dword;
     stats: array [0..6] of word = (0, 0, 0, 0, 0, 0, 0);
     counter: word;
 

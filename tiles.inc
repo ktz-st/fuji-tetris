@@ -143,9 +143,14 @@ nextYoff: array [0..6] of word = ( 4, 8, 4, 4, 4, 4, 4);
 
 tiles: array [0..3] of pointer =   (@tiles_0, @tiles_1, @tiles_2, @tiles_3);
 
-function getTile(tiletype,rotation:byte):pointer;
-var tileset: array of pointer;
+tiles_all: array [0..3, 0..6] of pointer = (
+    (@tile_J_0, @tile_I_0, @tile_S_0, @tile_O_0, @tile_L_0, @tile_Z_0, @tile_T_0),
+    (@tile_J_1, @tile_I_1, @tile_S_1, @tile_O_0, @tile_L_1, @tile_Z_1, @tile_T_1),
+    (@tile_J_2, @tile_I_2, @tile_S_2, @tile_O_0, @tile_L_2, @tile_Z_2, @tile_T_2),
+    (@tile_J_3, @tile_I_3, @tile_S_3, @tile_O_0, @tile_L_3, @tile_Z_3, @tile_T_3)
+);
+
+function getTile(tiletype, rotation: byte): pointer; inline;
 begin
-    tileset := tiles[rotation];
-    getTile := tileset[tiletype];
+    getTile := tiles_all[rotation, tiletype];
 end;
