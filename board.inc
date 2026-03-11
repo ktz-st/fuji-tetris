@@ -24,8 +24,8 @@ end;
 
 procedure DrawBlock(xp,yp,tiletype,rotation,option:byte);
 var x,y,i: byte;
-    tile: word;
-    tilebody: pword;
+    tile: byte;
+    tilebody: pbyte;
 begin
     i := 0;
     tilebody := getTile(tiletype,rotation);
@@ -49,17 +49,18 @@ end;
 
 function CanMoveBlock(xp,yp,tiletype,rotation:byte): boolean;
 var x,y,i: byte;
-    tile: word;
-    tilebody: pword;
-    canMove: boolean;   // <-- lokalna zmienna zamiast bezpośredniego przypisania do wyniku
+    tile: byte;
+    tilebody: pbyte;
+    canMove: boolean;
+    localYp: byte;       // ← nowa lokalna zmienna
 begin
     canMove := true;
     i := 0;
+    localYp := yp;       // ← kopia parametru
     tilebody := getTile(tiletype,rotation);
 
-    if (tileY>WELL_HEIGHT) and (rotation > 0) then begin // I tile type fix
-        Inc(tileY);
-        Inc(yp);
+    if (localYp>WELL_HEIGHT) and (rotation > 0) then begin // I tile type fix
+        Inc(localYp);    // ← modyfikuje TYLKO lokalną kopię
     end;
     y:=0;
     repeat
@@ -69,16 +70,16 @@ begin
             if ( tile=1 ) then
                 begin
                     if (byte(x+xp) > WELL_WIDTH-1) then canMove := false;
-                    if (byte(y+yp) > WELL_HEIGHT-1) then canMove := false;
-                    if canMove and (board[byte(x+xp),byte(y+yp)] <> 0) then canMove := false;
+                    if (byte(y+localYp) > WELL_HEIGHT-1) then canMove := false;        // ← localYp
+                    if canMove and (board[byte(x+xp),byte(y+localYp)] <> 0) then canMove := false;  // ← localYp
                 end;
             inc(i);
             inc(x);
-        until (x=tiles_sizes[tiletype]) or (not canMove);  // <-- wyjdź z wewnętrznej pętli
+        until (x=tiles_sizes[tiletype]) or (not canMove);
         Inc(y);
-    until (y=tiles_sizes[tiletype]) or (not canMove);      // <-- wyjdź z zewnętrznej pętli
+    until (y=tiles_sizes[tiletype]) or (not canMove);
 
-    CanMoveBlock := canMove;  // <-- przypisz wynik na końcu
+    CanMoveBlock := canMove;
 end;
 
 procedure DeleteRow(yr:byte);

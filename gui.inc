@@ -237,8 +237,8 @@ end;
 procedure DrawNext(xp,yp:byte);
 var 
     x,y,i:byte;
-    tile: word;
-    tilebody: pword;
+    tile: byte;
+    tilebody: pbyte;
 begin
     i:=0;
     tilebody := getTile(nextTile,0);
@@ -353,8 +353,8 @@ end;
 procedure DrawSmallTile(xp, yp: word; tiletype: byte);
 var 
     x,y,i:byte;
-    tile: word;
-    tilebody: pword;
+    tile: byte;
+    tilebody: pbyte;
 begin
     i:=0;
     tilebody := getTile(tiletype, 0);
@@ -530,16 +530,24 @@ end;
 procedure PauseGame;
 var
     dst: pbyte;
+    save_w, save_h: word;
+    bufsize: longint;
 begin
-    dst := gemdos_malloc((WELL_LEFT+(WELL_WIDTH*8)-7) * Trunc((WELL_TOP+(56-82)) / 2));
-    SaveBackground(WELL_LEFT+6,WELL_TOP+56,WELL_LEFT+(WELL_WIDTH*8)-7,WELL_TOP+82, dst);
+    // Użyj DOKŁADNIE tych samych parametrów co SaveBackground/DrawImage
+    save_w := WELL_LEFT+(WELL_WIDTH*8)-7;   // = 193 → Trunc(193/2) = 96 bajtów na linię
+    save_h := WELL_TOP+82;                  // = 116 → pętla 0..116 = 117 linii
+
+    bufsize := longint(Trunc(save_w/2)) * longint(save_h + 1);  // 96 × 117 = 11232
+    dst := gemdos_malloc(bufsize);
+
+    SaveBackground(WELL_LEFT+6, WELL_TOP+56, save_w, save_h, dst);
     ShowModal('   Game     Paused  ');
     SwapScreen;
     repeat 
         GetUserInput;
     until (key=KEY_P) or (key=KEY_ESC);
     SwapScreen;
-    DrawImage(WELL_LEFT+6,WELL_TOP+56,WELL_LEFT+(WELL_WIDTH*8)-7,WELL_TOP+82, dst);
+    DrawImage(WELL_LEFT+6, WELL_TOP+56, save_w, save_h, dst);
     gemdos_mfree(dst);
 end;
 

@@ -47,7 +47,7 @@ var
     comboCounter:byte;
     crackCounter:byte;
     joyStatus: byte;
-    oldPalette: array[0..16] of word;
+    oldPalette: array[0..15] of word;
     oldRez: word;
     SCREEN_LOG, SCREEN_PHY, oldScreen: pword;
     pParamblk, pFnthdr, pFktadr: pword;
