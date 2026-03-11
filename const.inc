@@ -5,11 +5,11 @@ STARTING_LEVEL_MAX = 15;
 
 TILE_SIZE = 10;                                  // NOWA stała
 WELL_LEFT = 110;                                 // było 130, przesunięte bo studnia szersza
-WELL_TOP = 14;                                   // było 34, podniesione
+WELL_TOP = 6;                                   // było 34, podniesione
 WELL_WIDTH = 10;      
-WELL_HEIGHT = 18;                                // było 20
+WELL_HEIGHT = 19;                                // było 20
 RCOL = WELL_LEFT+(WELL_WIDTH*TILE_SIZE)+10;      // było *8)+30
-LCOL = WELL_LEFT-30;
+LCOL = WELL_LEFT-25;
 
 JOY_DELAY = 5;
 {$IFDEF HOSPES}

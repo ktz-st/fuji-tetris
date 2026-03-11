@@ -307,10 +307,10 @@ begin
         UnApl(@MUSICE, MUSIC);  
         SNDH_PlayTuneISR(MUSIC,1);    
         DrawCounters;
-        ShowModal('   GAME      OVER   ');
+        ShowModal('  GAME OVER');
         SwapScreen;
         DrawCounters;
-        ShowModal('   GAME      OVER   ');
+        ShowModal('  GAME OVER');
         counter := 0;
         repeat
             GetUserInput;
