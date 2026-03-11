@@ -17,15 +17,17 @@ begin
     if (a<b) then Min:=a else Min:=b;
 end;
 
-function GetPaddedInt(i:cardinal;p:byte):string;
-var tmp:string;
-    o:byte;
+function GetPaddedInt(i:cardinal; p:byte): string;
+var
+    tmp: string;
+    o, tlen: byte;
 begin
-    FillChar(GetPaddedInt[1],p,'0');
-    SetLength(GetPaddedInt,p);
-    str(i,tmp);
-    o:=p-Length(tmp);
-    move(tmp[1],GetPaddedInt[o+1],Length(tmp));
+    str(i, tmp);                           // konwersja liczby -> string
+    tlen := Length(tmp);                   // <-- zapamiętaj raz, nie obliczaj dwa razy
+    SetLength(GetPaddedInt, p);
+    FillChar(GetPaddedInt[1], p, '0');     // wypełnij zerami
+    o := p - tlen;
+    Move(tmp[1], GetPaddedInt[o+1], tlen); // skopiuj cyfry na właściwe miejsce
 end;
 
 procedure LoadTopScore;

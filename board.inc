@@ -1,17 +1,8 @@
 procedure NextTune; forward;
 
 procedure ClrBoard;
-var x,y: byte;
 begin
-    x:=0;
-    repeat
-        y:=0;
-        repeat
-            board[x,y] := 0;
-            inc(y);
-        until y=WELL_HEIGHT;
-        inc(x);
-    until x=WELL_WIDTH;
+    FillChar(board, SizeOf(board), 0);
 end;
 
 // procedure DrawBoard;
@@ -60,8 +51,9 @@ function CanMoveBlock(xp,yp,tiletype,rotation:byte): boolean;
 var x,y,i: byte;
     tile: word;
     tilebody: pword;
+    canMove: boolean;   // <-- lokalna zmienna zamiast bezpośredniego przypisania do wyniku
 begin
-    CanMoveBlock := true;
+    canMove := true;
     i := 0;
     tilebody := getTile(tiletype,rotation);
 
@@ -74,17 +66,19 @@ begin
         x:=0;
         repeat
             tile := (tilebody+i)^;
-            if ( tile=1 )then
+            if ( tile=1 ) then
                 begin
-                    if (byte(x+xp) > WELL_WIDTH-1 )then CanMoveBlock := false;
-                    if (byte(y+yp) > WELL_HEIGHT-1 )then CanMoveBlock := false;
-                    if CanMoveBlock and ( board[byte(x+xp),byte(y+yp)]<>0 ) then CanMoveBlock := false;
-                end;  
+                    if (byte(x+xp) > WELL_WIDTH-1) then canMove := false;
+                    if (byte(y+yp) > WELL_HEIGHT-1) then canMove := false;
+                    if canMove and (board[byte(x+xp),byte(y+yp)] <> 0) then canMove := false;
+                end;
             inc(i);
             inc(x);
-        until x=tiles_sizes[tiletype];
+        until (x=tiles_sizes[tiletype]) or (not canMove);  // <-- wyjdź z wewnętrznej pętli
         Inc(y);
-    until y=tiles_sizes[tiletype];      
+    until (y=tiles_sizes[tiletype]) or (not canMove);      // <-- wyjdź z zewnętrznej pętli
+
+    CanMoveBlock := canMove;  // <-- przypisz wynik na końcu
 end;
 
 procedure DeleteRow(yr:byte);
