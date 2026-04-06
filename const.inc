@@ -58,3 +58,5 @@ speed_table: array [1..15] of byte = (
     3,   // level 14  = 0.06s
     2    // level 15  = 0.04s
 );
+
+ALL_BLACK: array [0..15] of word = (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
