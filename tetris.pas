@@ -7,6 +7,7 @@ const
 {$i const.inc}
 {$i tiles.inc}
 {$i palette.inc}
+{$i images/teamlogo.inc}
 {$i images/logo.inc}
 {$i images/intro.inc}
 {$IFDEF HOSPES}
@@ -185,9 +186,9 @@ begin
     prevFireState := 0;
     Randomize;
     LoadTopScore;
+    LogoScreen;
 
     repeat
-
         // title screen
         UnApl(@MUSICI, MUSIC);  
         SNDH_PlayTuneISR(MUSIC, 1);

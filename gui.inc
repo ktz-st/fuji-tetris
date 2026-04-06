@@ -579,12 +579,23 @@ begin
     gemdos_mfree(dst);
 end;
 
+procedure LogoScreen;
+begin
+    ClearScreen(SCREEN_PHY);
+    xbios_setpalette(@ALL_BLACK);
+    UnApl(@TEAMLOGO, SCREEN_LOG);
+    xbios_setpalette(@TEAMLOGO_PAL);
+    SwapScreen;
+    Pause(120);
+end;
+
 procedure TitleScreen;
 var f:byte;
 begin
     ClearScreen(SCREEN_PHY);
-    xbios_setpalette(@INTRO_PAL);
+    xbios_setpalette(@ALL_BLACK);
     UnApl(@INTRO, SCREEN_LOG);
+    xbios_setpalette(@INTRO_PAL);
     NeoDrawString(170,160,1,'Code: bocianu/KtZ');
     NeoDrawString(170,170,1,' GFX: bocianu/Hospes');
 {$IFDEF HOSPES}
