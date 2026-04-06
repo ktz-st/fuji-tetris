@@ -500,6 +500,8 @@ begin
 end;
 
 procedure GetUserInput;
+var
+    currentFireState: byte;
 begin
     key := 0;
     actionKey := 0;
@@ -515,6 +517,13 @@ begin
 
     if (key = 0) and (actionKey = 0) then
         ReadJoy(key, actionKey);
+
+    // Edge detection dla FIRE (rotacji z joysticka)
+    // Rotacja działa tylko na WCIŚNIĘCIE, nie na TRZYMANIE
+    currentFireState := actionKey;
+    if (actionKey <> 0) and (prevFireState <> 0) then
+        actionKey := 0;  // FIRE było już wciśnięte — ignoruj
+    prevFireState := currentFireState;
 
     // joyDelay dotyczy TYLKO ruchu, nie rotacji
     if key = 0 then begin
