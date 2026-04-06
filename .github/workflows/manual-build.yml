@@ -34,11 +34,7 @@ jobs:
         shell: bash
         run: |
           set -eux
-          cat /opt/fpc/etc/fpc.cfg
-          ls -al /opt/fpc/lib/fpc/
-          ls -al /opt/fpc/lib/fpc/3.3.1/units/m68k-atari/
-          ls -al /opt/fpc/lib/fpc/3.3.1/units/atari/rtl/
-          ppcross68k -Tatari tetris.pas
+          ppcross68k -Fu/opt/fpc/lib/fpc/3.3.1/units/atari/rtl -Tatari tetris.pas
 
       - name: Create/Update Release and upload ZIP
         uses: softprops/action-gh-release@v2
