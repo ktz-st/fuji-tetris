@@ -57,6 +57,7 @@ var
 	old_joyvec: pointer;
     joy_on:byte = $14;
     mouse_on:byte = $08;
+    prevFireState: byte;
     music_on: boolean = true;
     next_tune_counter: byte;
 {$IFDEF HOSPES}
@@ -181,6 +182,7 @@ begin
     startingLevel :=1 ;
     level := 1;
     joyDelay := 0;
+    prevFireState := 0;
     Randomize;
     LoadTopScore;
 
