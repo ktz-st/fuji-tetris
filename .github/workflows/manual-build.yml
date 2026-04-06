@@ -37,7 +37,7 @@ jobs:
           cat /opt/fpc/etc/fpc.cfg
           ls -al /opt/fpc/lib/fpc/
           ls -al /opt/fpc/lib/fpc/3.3.1/units/m68k-atari/
-          ls -al /opt/fpc/lib/fpc/3.3.1/units/atari/
+          ls -al /opt/fpc/lib/fpc/3.3.1/units/atari/rtl/
           ppcross68k -Tatari tetris.pas
 
       - name: Create/Update Release and upload ZIP
