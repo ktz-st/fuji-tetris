@@ -16,7 +16,7 @@ on:
       release_name:
         description: "Release name"
         required: true
-        default: "Manual build"
+        default: "Fuji Tetris 1.0.x"
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout into fuji-tetris (next to deps)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: ''
 
