@@ -52,9 +52,11 @@ begin
         cell := tile_cells[rotation,tiletype,i];
         x := byte(xp + (cell and $0f));
         y := byte(yp + (cell shr 4));
-        if board[x,y] = 0 then
-            Inc(rowCount[y]);
-        board[x,y] := tiletype+1;
+        if (x < WELL_WIDTH) and (y < WELL_HEIGHT) then begin
+            if board[x,y] = 0 then
+                Inc(rowCount[y]);
+            board[x,y] := tiletype+1;
+        end;
     end;
 end;
 

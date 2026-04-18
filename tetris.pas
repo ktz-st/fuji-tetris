@@ -80,6 +80,9 @@ var
     shownTotalLines: array [0..1] of word;
     shownLevel: array [0..1] of byte;
     shownStats: array [0..1,0..6] of word;
+    squareCache: array [1..SQUARE_CACHE_COLORS,0..SQUARE_CACHE_SHIFTS-1,0..SQUARE_CACHE_HEIGHT-1,0..SQUARE_CACHE_WORDS-1] of word;
+    clearSquareCache: array [0..SQUARE_CACHE_SHIFTS-1,0..SQUARE_CACHE_HEIGHT-1,0..SQUARE_CACHE_WORDS-1] of word;
+    squareMask: array [0..SQUARE_CACHE_SHIFTS-1,0..SQUARE_CACHE_GROUPS-1] of word;
     counter: word;
 
 {$i random.inc}

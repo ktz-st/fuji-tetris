@@ -76,7 +76,7 @@ $(HOSPES_TARGET): $(HOSPES_SOURCES) Makefile
 	$(PPC) $(PFLAGS) -dHOSPES -o$(HOSPES_TARGET) $(MAIN)
 
 clean:
-	rm -f $(TARGET) $(HOSPES_TARGET) tetris.o tetris.s a.out *.ppu *.map
+	rm -f $(TARGET) $(HOSPES_TARGET) tetris.o tetris.s *.o *.ppu *.map
 
 run: $(TARGET)
 	$(HATARI) $(HATARI_FLAGS) $(TARGET) &

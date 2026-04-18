@@ -15,16 +15,25 @@ type
       mHeight : word;
     end;
 
+  sSquareBlit = record
+      mData : pointer;
+      mMask : pointer;
+      mOffset : word;
+    end;
+
 {$IFNDEF HOSPES}
   PsGraphicPos  = ^sGraphicPos;
 {$ENDIF}
   PsGraphicRect  = ^sGraphicRect;
+  PsSquareBlit = ^sSquareBlit;
 
 {$IFNDEF HOSPES}
 procedure DrawPixel(screen: pointer; coords: PsGraphicPos; color: integer);external;
 {$ENDIF}
 
 procedure DrawBox(screen: pointer; box: PsGraphicRect; color: integer);external;
+
+procedure BlitCachedSquare(screen: pointer; params: PsSquareBlit);external;
 
 procedure SavePalette(palette: pword);
 var
@@ -164,17 +173,6 @@ begin
     DrawBox(SCREEN_LOG, @box, color);
 end;
 
-procedure NeoDrawRectPhy(x1,y1,x2,y2,color:word);
-var
-    box: sGraphicRect;
-begin
-    box.mX := x1;
-    box.mY := y1;
-    box.mWidth := x2-x1+1;
-    box.mHeight := y2-y1+1;
-    DrawBox(SCREEN_PHY, @box, color);
-end;
-
 function ActiveScreenIndex: byte;
 begin
     if SCREEN_LOG = SCREEN_0 then
@@ -233,6 +231,82 @@ begin
     NeoDrawRect(x,y,x+2,y+2,tiletype+8);
 end;
 
+procedure CachePixel(var bits: array of word; pixel, color: byte);
+const
+    planeWordIndex: array[0..3] of byte = (0,1,2,3);
+var
+    group, plane, wordIndex: byte;
+    bit: word;
+begin
+    group := pixel shr 4;
+    bit := word(1) shl (15 - (pixel and 15));
+    for plane := 0 to 3 do begin
+        if (color and (1 shl plane)) <> 0 then begin
+            wordIndex := (group shl 2) + planeWordIndex[plane];
+            bits[wordIndex] := bits[wordIndex] or bit;
+        end;
+    end;
+end;
+
+procedure BuildSquareCache;
+var
+    tiletype, shift, line, dx, color, pixel, group: byte;
+    bit: word;
+begin
+    FillChar(squareCache, SizeOf(squareCache), 0);
+    FillChar(clearSquareCache, SizeOf(clearSquareCache), 0);
+    FillChar(squareMask, SizeOf(squareMask), 0);
+
+    for shift := 0 to SQUARE_CACHE_SHIFTS-1 do begin
+        for dx := 0 to TILE_SIZE-1 do begin
+            pixel := shift + dx;
+            group := pixel shr 4;
+            bit := word(1) shl (15 - (pixel and 15));
+            squareMask[shift,group] := squareMask[shift,group] or bit;
+        end;
+    end;
+
+    for shift := 0 to SQUARE_CACHE_SHIFTS-1 do begin
+        for line := 0 to TILE_SIZE-1 do begin
+            for dx := 0 to TILE_SIZE-1 do begin
+                pixel := shift + dx;
+                CachePixel(clearSquareCache[shift,line], pixel, 2);
+                for tiletype := 1 to SQUARE_CACHE_COLORS do begin
+                    if (line = 0) or (dx = 0) then
+                        color := 6
+                    else if (line = TILE_SIZE-1) or (dx = TILE_SIZE-1) then
+                        color := 2
+                    else
+                        color := tiletype + 8;
+                    CachePixel(squareCache[tiletype,shift,line], pixel, color);
+                end;
+            end;
+        end;
+    end;
+end;
+
+procedure BlitSquareCache(screen: pointer; x,y,tiletype: byte; clearTile: boolean);
+var
+    tx, ty, offset: word;
+    shift: byte;
+    params: sSquareBlit;
+begin
+    if (x >= WELL_WIDTH) or (y >= WELL_HEIGHT) then
+        exit;
+
+    tx := x * TILE_SIZE + WELL_LEFT;
+    ty := y * TILE_SIZE + WELL_TOP;
+    shift := tx and 15;
+    offset := (ty * 160) + ((tx shr 4) shl 3);
+    if clearTile then
+        params.mData := @clearSquareCache[shift,0,0]
+    else
+        params.mData := @squareCache[tiletype,shift,0,0];
+    params.mMask := @squareMask[shift,0];
+    params.mOffset := offset;
+    BlitCachedSquare(screen, @params);
+end;
+
 procedure DrawSquareNext(x,y,tiletype,xoff,yoff:byte);overload;
 var tx,ty:word;
 begin
@@ -248,6 +322,11 @@ end;
 procedure DrawSquare(x,y,tiletype,xoff,yoff:byte);overload;
 var tx,ty:word;
 begin
+    if (xoff = 0) and (yoff = 0) then begin
+        BlitSquareCache(SCREEN_LOG, x, y, tiletype, false);
+        exit;
+    end;
+
     tx:=(x * TILE_SIZE) + WELL_LEFT - xoff;
     ty:=(y * TILE_SIZE) + WELL_TOP - yoff;
     NeoDrawRect(tx, ty, tx+TILE_SIZE-1, ty+TILE_SIZE-1, tiletype+8);
@@ -263,19 +342,13 @@ begin
 end;
 
 procedure ClearSquare(x,y:byte);
-var tx,ty:word;
 begin
-    tx:=x * TILE_SIZE + WELL_LEFT;
-    ty:=y * TILE_SIZE + WELL_TOP;
-    NeoDrawRect(tx, ty, tx+TILE_SIZE-1, ty+TILE_SIZE-1, 2);
+    BlitSquareCache(SCREEN_LOG, x, y, 1, true);
 end;
 
 procedure ClearSquarePhy(x,y:byte);
-var tx,ty:word;
 begin
-    tx:=x * TILE_SIZE + WELL_LEFT;
-    ty:=y * TILE_SIZE + WELL_TOP;
-    NeoDrawRectPhy(tx, ty, tx+TILE_SIZE-1, ty+TILE_SIZE-1, 2);
+    BlitSquareCache(SCREEN_PHY, x, y, 1, true);
 end;
 
 procedure ClearNext;
@@ -479,7 +552,7 @@ begin
     s:='NEXT';
     NeoDrawString(LCOL+35,WELL_TOP+58,8,s);
     s:='Statistics';
-    NeoDrawString(LCOL+10,WELL_TOP+110,8,s);
+    NeoDrawString(LCOL+16,WELL_TOP+110,8,s);
     DrawStats;
     DrawCounters;
 end;
@@ -599,6 +672,7 @@ begin
     UnApl(@TEAMLOGO, SCREEN_LOG);
     xbios_setpalette(@TEAMLOGO_PAL);
     SwapScreen;
+    BuildSquareCache;
     Pause(120);
 end;
 

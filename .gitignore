@@ -1,8 +1,9 @@
 .vscode
 storage
 memory.dump
-*.lst
-*.a65
+*.o
+*.prg
+*.tos
 GPATH
 GTAGS
 GRTAGS

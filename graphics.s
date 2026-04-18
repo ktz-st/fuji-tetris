@@ -1,6 +1,7 @@
 
 	export	DrawPixel
 	export	DrawBox
+	export	BlitCachedSquare
 
 
 DrawPixel:
@@ -182,6 +183,97 @@ DrawBox:
 .fin:
 
 	movem.l	(a7)+,d3-d7/a2-a6					; restore registers
+	rts
+
+BlitCachedSquare:
+	movem.l	d3-d4/a2-a3,-(a7)
+
+	move.l	0(a1),a2							; cached tile data
+	move.l	4(a1),a3							; 2 word masks
+	moveq	#0,d4
+	move.w	8(a1),d4							; screen byte offset
+	add.l	d4,a0								; destination
+
+	moveq	#9,d3								; 10 lines
+.squareLine:
+	move.w	(a3),d2								; group 0 mask
+	beq.s	.skipGroup0
+	move.w	d2,d0
+	not.w	d0
+
+	move.w	(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,(a0)
+
+	move.w	2(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,2(a0)
+
+	move.w	4(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,4(a0)
+
+	move.w	6(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,6(a0)
+	bra.s	.group0Done
+.skipGroup0:
+	addq.l	#8,a2
+.group0Done:
+
+	move.w	2(a3),d2							; group 1 mask
+	beq.s	.skipGroup1
+	move.w	d2,d0
+	not.w	d0
+
+	move.w	8(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,8(a0)
+
+	move.w	10(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,10(a0)
+
+	move.w	12(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,12(a0)
+
+	move.w	14(a0),d1
+	and.w	d0,d1
+	move.w	(a2)+,d4
+	and.w	d2,d4
+	or.w	d4,d1
+	move.w	d1,14(a0)
+	bra.s	.group1Done
+.skipGroup1:
+	addq.l	#8,a2
+.group1Done:
+
+	lea		160(a0),a0
+	dbra	d3,.squareLine
+
+	movem.l	(a7)+,d3-d4/a2-a3
 	rts
 
 **************************************************************************************
