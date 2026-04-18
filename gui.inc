@@ -1,7 +1,7 @@
 {$L graphics.o}
 
 type
-{$IFNDEF HOSPES}
+{$IFNDEF STE}
   sGraphicPos = record
       mX : word;
       mY : word;
@@ -21,13 +21,13 @@ type
       mOffset : word;
     end;
 
-{$IFNDEF HOSPES}
+{$IFNDEF STE}
   PsGraphicPos  = ^sGraphicPos;
 {$ENDIF}
   PsGraphicRect  = ^sGraphicRect;
   PsSquareBlit = ^sSquareBlit;
 
-{$IFNDEF HOSPES}
+{$IFNDEF STE}
 procedure DrawPixel(screen: pointer; coords: PsGraphicPos; color: integer);external;
 {$ENDIF}
 
@@ -56,7 +56,7 @@ end;
 
 procedure ClearScreen(address: pword);
 begin
-    FillWord((address-640)^,16640,0);
+    FillWord((address-SCREEN_SHAKE_WORDS)^,SCREEN_CLEAR_WORDS,0);
 end;
 
 procedure FlashBackground;
@@ -74,12 +74,38 @@ begin
     end;
 end;
 
-procedure ShakeScreen;
+procedure ShakeScreen(level: byte);
+var
+    shakeWords: word;
 begin
-    SCREEN_LOG := SCREEN_LOG - 8*80;
+{$IFDEF STE}
+    if level < 1 then level := 1;
+    if level > 4 then level := 4;
+    case level of
+        1: shakeWords := SCREEN_LINE_BYTES;
+        2: shakeWords := SCREEN_LINE_BYTES * 2;
+        3: shakeWords := SCREEN_LINE_BYTES * 3;
+        else shakeWords := SCREEN_SHAKE_WORDS;
+    end;
+{$ELSE}
+    shakeWords := SCREEN_SHAKE_WORDS;
+{$ENDIF}
+    PlayShakeSound(level);
+{$IFDEF STE}
+    xbios_setscreen(SCREEN_LOG, SCREEN_PHY - shakeWords, -1);
+    xbios_vsync;
+
+    xbios_setscreen(SCREEN_LOG, SCREEN_PHY + shakeWords, -1);
+    xbios_vsync;
+
+    xbios_setscreen(SCREEN_LOG, SCREEN_PHY, -1);
+    xbios_vsync;
+{$ELSE}
+    SCREEN_LOG := SCREEN_LOG - shakeWords;
     SwapScreen;
-    SCREEN_PHY := SCREEN_PHY + 8*80;
+    SCREEN_PHY := SCREEN_PHY + shakeWords;
     SwapScreen;
+{$ENDIF}
 end;
 
 procedure LineA_Init;
@@ -151,7 +177,7 @@ begin
     end;
 end;
 
-{$IFNDEF HOSPES}
+{$IFNDEF STE}
 procedure NeoDrawPixel(x,y,color:integer);
 var
     coords: sGraphicPos;
@@ -285,13 +311,13 @@ begin
     end;
 end;
 
-procedure BlitSquareCache(screen: pointer; x,y,tiletype: byte; clearTile: boolean);
+procedure BlitSquareCache(screen: pointer; x,y:TCellCoord; tiletype: byte; clearTile: boolean);
 var
     tx, ty, offset: word;
     shift: byte;
     params: sSquareBlit;
 begin
-    if (x >= WELL_WIDTH) or (y >= WELL_HEIGHT) then
+    if not CellInsideWell(x,y) then
         exit;
 
     tx := x * TILE_SIZE + WELL_LEFT;
@@ -319,7 +345,7 @@ begin
     NeoDrawRect(tx-5, ty+TILE_SIZE-1, tx+TILE_SIZE-6, ty+TILE_SIZE-1, 2);
 end;
 
-procedure DrawSquare(x,y,tiletype,xoff,yoff:byte);overload;
+procedure DrawSquare(x,y:TCellCoord; tiletype,xoff,yoff:byte);overload;
 var tx,ty:word;
 begin
     if (xoff = 0) and (yoff = 0) then begin
@@ -336,17 +362,17 @@ begin
     NeoDrawRect(tx, ty+TILE_SIZE-1, tx+TILE_SIZE-1, ty+TILE_SIZE-1, 2);
 end;
 
-procedure DrawSquare(x,y,tiletype:byte);overload;
+procedure DrawSquare(x,y:TCellCoord; tiletype:byte);overload;
 begin
     DrawSquare(x,y,tiletype,0,0);
 end;
 
-procedure ClearSquare(x,y:byte);
+procedure ClearSquare(x,y:TCellCoord);
 begin
     BlitSquareCache(SCREEN_LOG, x, y, 1, true);
 end;
 
-procedure ClearSquarePhy(x,y:byte);
+procedure ClearSquarePhy(x,y:TCellCoord);
 begin
     BlitSquareCache(SCREEN_PHY, x, y, 1, true);
 end;
@@ -368,10 +394,9 @@ begin
     end;
 end;
 
-{$IFDEF HOSPES}
+{$IFDEF STE}
 procedure Box(x0,y0,x1,y1:word;c1,c2:byte);
 begin
-    // NeoDrawRect(x0,y0,x1,y1,2);
     NeoDrawRect(x0-2, y0-2, x1+4, y0-2, c1);
     NeoDrawRect(x1+4, y0-2, x1+4, y1+4, c1);
     NeoDrawRect(x0-2, y1+4, x1+4, y1+4, c1);
@@ -428,14 +453,14 @@ var py:word;
     screen:pbyte;
 begin
     screen := PByte(SCREEN_LOG);
-    offset := y * 160;
+    offset := y * SCREEN_LINE_BYTES;
     offset := offset + (x shr 4) shl 3;
     w := Trunc(w/2);
 
     for py := 0 to h do begin
         move(screen[offset], dst^, w);
         dst := dst + w;
-        offset := offset + 160;
+        offset := offset + SCREEN_LINE_BYTES;
     end;
 end;
 
@@ -445,15 +470,13 @@ var py:word;
     screen:pbyte;
 begin
     screen := PByte(SCREEN_LOG);
-    offset := y * 160;
+    offset := y * SCREEN_LINE_BYTES;
     offset := offset + (x shr 4) shl 3;
     w := Trunc(w/2);
-    // offset := offset + (x shr 4) shl 3;
-
     for py := 0 to h-1 do begin
         move(src^, screen[offset], w);
         src := src + w;
-        offset := offset + 160;
+        offset := offset + SCREEN_LINE_BYTES;
     end;
 end;
 
@@ -506,8 +529,6 @@ end;
 
 procedure DrawBackground;
 begin
-    // ClrScr;
-    // NeoDrawRect(0,0,320,200);
     DrawImage(RCOL+10,10,96,102,@LOGO);
     s:='FIRE - rotate';
     NeoDrawString(RCOL+10,140,4,s);
@@ -525,16 +546,13 @@ end;
 
 procedure DrawGui;
 begin
-{$IFDEF HOSPES}
+{$IFDEF STE}
     WellBox(WELL_LEFT,WELL_TOP,WELL_LEFT+(WELL_WIDTH*TILE_SIZE)-1,WELL_TOP+(WELL_HEIGHT*TILE_SIZE)-1,4,4);
 {$ELSE}
     Box(WELL_LEFT,WELL_TOP,WELL_LEFT+(WELL_WIDTH*TILE_SIZE)-1,WELL_TOP+(WELL_HEIGHT*TILE_SIZE)-1,4,4);
 {$ENDIF}
     Box(LCOL,WELL_TOP,LCOL+95,WELL_TOP+40,2,4); // LINES
-    
-    // Box(LCOL,WELL_TOP+20,LCOL+95,WELL_TOP+40,2,4); // SCORExTOP
     Box(LCOL+20,WELL_TOP+56,LCOL+75,WELL_TOP+90,4,4); // NEXT
-    // Box(LCOL+15,WELL_TOP+96,LCOL+80,WELL_TOP+106,2,4); // LEVEL
     Box(LCOL,WELL_TOP+106,LCOL+95,WELL_TOP+(WELL_HEIGHT*TILE_SIZE)-1,2,4); // STATISTICS
 
     DrawStatTiles;
@@ -648,7 +666,7 @@ begin
         end;
         if (key = KEY_N) or (key = KEY_ESC)then begin
             quit := false;
-            Move(SCREEN_LOG^, SCREEN_PHY^, 32000);
+            Move(SCREEN_LOG^, SCREEN_PHY^, SCREEN_BYTES);
         end;
     until (key = KEY_Y) or (key = KEY_N) or (key = KEY_ESC);
 end;
@@ -670,32 +688,44 @@ begin
     ClearScreen(SCREEN_PHY);
     xbios_setpalette(@ALL_BLACK);
     UnApl(@TEAMLOGO, SCREEN_LOG);
-    xbios_setpalette(@TEAMLOGO_PAL);
     SwapScreen;
     BuildSquareCache;
+    FadeToPalette(pword(@TEAMLOGO_PAL), FADE_FRAMES);
     Pause(120);
+    FadeToBlack(FADE_FRAMES);
 end;
 
 procedure TitleScreen;
-var f:byte;
+var
+    f: byte;
+    fireReleased: boolean;
 begin
     ClearScreen(SCREEN_PHY);
     xbios_setpalette(@ALL_BLACK);
     UnApl(@INTRO, SCREEN_LOG);
-    xbios_setpalette(@INTRO_PAL);
     NeoDrawString(170,160,1,'Code: bocianu/KtZ');
     NeoDrawString(170,170,1,' GFX: bocianu/Hospes');
-{$IFDEF HOSPES}
+{$IFDEF STE}
     NeoDrawString(170,180,1,' MSX: TAO');
+    if not steMachine then
+        NeoDrawString(30,170,1,'Atari STe required for DMA SFX');
 {$ELSE}
     NeoDrawString(170,180,1,' MSX: Dma-Sc');
 {$ENDIF}
-    Move(SCREEN_LOG^, SCREEN_PHY^, 32000);
+    Move(SCREEN_LOG^, SCREEN_PHY^, SCREEN_BYTES);
+    FadeToPalette(pword(@INTRO_PAL), FADE_FRAMES);
     f:=0;
+    key := 0;
+    actionKey := 0;
+    prevFireState := 0;
+    joyDelay := 0;
+    fireReleased := false;
     repeat 
         UpdateStartingLevel(3);
         NeoDrawString(30,180,f,'Press FIRE to Start');
         GetUserInput;
+        if actionKey = 0 then
+            fireReleased := true;
         if key = KEY_LEFT then begin
             if startingLevel=1 then startingLevel:=STARTING_LEVEL_MAX else dec(startingLevel);
         end;
@@ -706,9 +736,7 @@ begin
         inc(f);
         if f > 5 then f := 0;
         SwapScreen;
-    until (actionKey=KEY_ENTER) or (actionKey=KEY_SPACE) or quit;
-    // UpdateStartingLevel(24);
-
+    until (((actionKey=KEY_ENTER) or (actionKey=KEY_SPACE)) and fireReleased) or quit;
     level := startingLevel;
     lines2levelup := level * LEVEL_UP_TRESHOLD;
 end;

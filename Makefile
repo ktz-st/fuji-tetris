@@ -2,12 +2,13 @@ PPC = ppcross68k
 AS = vasmm68k_mot
 
 TARGET = tetris.prg
-HOSPES_TARGET = tetris_hospes.prg
+STE_TARGET = tetriste.prg
 MAIN = tetris.pas
 
 PFLAGS = -Tatari -O2 -Si -Xs
 HATARI = hatari
 HATARI_FLAGS = -w --monitor rgb --fastfdc true
+HATARI_STE_FLAGS = $(HATARI_FLAGS) --machine ste
 
 SOURCES = \
 	$(MAIN) \
@@ -16,6 +17,8 @@ SOURCES = \
 	palette.inc \
 	random.inc \
 	helpers.inc \
+	sound.inc \
+	fade.inc \
 	gui.inc \
 	board.inc \
 	images/teamlogo.inc \
@@ -31,15 +34,19 @@ SOURCES = \
 	msx/musice.inc \
 	graphics.o \
 	sndhisr.o \
-	unapl.o
+	unapl.o \
+	screen.o \
+	vbl.o
 
-HOSPES_SOURCES = \
+STE_SOURCES = \
 	$(MAIN) \
 	const.inc \
 	tiles.inc \
 	palette.inc \
 	random.inc \
 	helpers.inc \
+	sound.inc \
+	fade.inc \
 	gui.inc \
 	board.inc \
 	images/teamlogo.inc \
@@ -50,11 +57,20 @@ HOSPES_SOURCES = \
 	msx/hmusic2.inc \
 	msx/hmusic3.inc \
 	msx/hmusice.inc \
+	msx/drop.raw \
+	msx/rotate.raw \
+	msx/1shake.raw \
+	msx/2shake.raw \
+	msx/3shake.raw \
+	msx/4shake.raw \
 	graphics.o \
 	sndhisr.o \
-	unapl.o
+	unapl.o \
+	screen.o \
+	vbl.o \
+	dmasound.o
 
-.PHONY: all clean run hospes
+.PHONY: all clean run ste run-ste
 
 all: $(TARGET)
 
@@ -70,13 +86,25 @@ unapl.o: unapl.s
 sndhisr.o: sndhisr.s
 	$(AS) -quiet -Faout -o $@ $<
 
-hospes: $(HOSPES_TARGET)
+screen.o: screen.s
+	$(AS) -quiet -Faout -o $@ $<
 
-$(HOSPES_TARGET): $(HOSPES_SOURCES) Makefile
-	$(PPC) $(PFLAGS) -dHOSPES -o$(HOSPES_TARGET) $(MAIN)
+vbl.o: vbl.s
+	$(AS) -quiet -Faout -o $@ $<
+
+dmasound.o: dmasound.s
+	$(AS) -quiet -Faout -o $@ $<
+
+ste: $(STE_TARGET)
+
+$(STE_TARGET): $(STE_SOURCES) Makefile
+	$(PPC) $(PFLAGS) -dSTE -o$(STE_TARGET) $(MAIN)
 
 clean:
-	rm -f $(TARGET) $(HOSPES_TARGET) tetris.o tetris.s *.o *.ppu *.map
+	rm -f $(TARGET) $(STE_TARGET) tetris.o tetris.s *.o *.ppu *.map
 
 run: $(TARGET)
 	$(HATARI) $(HATARI_FLAGS) $(TARGET) &
+
+run-ste: $(STE_TARGET)
+	$(HATARI) $(HATARI_STE_FLAGS) $(STE_TARGET) &

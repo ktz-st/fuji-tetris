@@ -10,7 +10,7 @@ const
 {$i images/teamlogo.inc}
 {$i images/logo.inc}
 {$i images/intro.inc}
-{$IFDEF HOSPES}
+{$IFDEF STE}
 {$i msx/hmusici.inc}
 {$i msx/hmusic1.inc}
 {$i msx/hmusic2.inc}
@@ -26,6 +26,10 @@ const
 {$i msx/music6.inc}
 {$i msx/musice.inc}
 {$ENDIF}
+
+type
+    TCellCoord = smallint;
+
 var
     board: array[0..WELL_WIDTH-1,0..WELL_HEIGHT-1] of byte;
     rowCount: array[0..WELL_HEIGHT-1] of byte;
@@ -37,7 +41,7 @@ var
     startingLevel: byte;
     nextTile,currentTile,prevTile1,prevTile2: byte;
     rotation,prevRotation1,prevRotation2: byte;
-    tileX,tileY,prevX1,prevX2,prevY1,prevY2: byte;
+    tileX,tileY,prevX1,prevX2,prevY1,prevY2: TCellCoord;
     key: byte;
     actionKey: byte;
     fallcounter: byte;
@@ -65,7 +69,7 @@ var
     prevFireState: byte;
     music_on: boolean = true;
     next_tune_counter: byte;
-{$IFDEF HOSPES}
+{$IFDEF STE}
     game_tunes: array[0..3] of pointer = (@MUSIC3, @MUSIC1, @MUSIC2, @MUSICI);
 {$ELSE}
     game_tunes: array[0..5] of pointer = (@MUSIC1, @MUSIC2, @MUSIC3, @MUSIC4, @MUSIC5, @MUSIC6);
@@ -83,10 +87,20 @@ var
     squareCache: array [1..SQUARE_CACHE_COLORS,0..SQUARE_CACHE_SHIFTS-1,0..SQUARE_CACHE_HEIGHT-1,0..SQUARE_CACHE_WORDS-1] of word;
     clearSquareCache: array [0..SQUARE_CACHE_SHIFTS-1,0..SQUARE_CACHE_HEIGHT-1,0..SQUARE_CACHE_WORDS-1] of word;
     squareMask: array [0..SQUARE_CACHE_SHIFTS-1,0..SQUARE_CACHE_GROUPS-1] of word;
+{$IFDEF STE}
+    soundReady: boolean;
+    steMachine: boolean;
+    sfxDrop, sfxRotate: pointer;
+    sfxShake: array[1..4] of pointer;
+    sfxDropLen, sfxRotateLen: cardinal;
+    sfxShakeLen: array[1..4] of cardinal;
+{$ENDIF}
     counter: word;
 
 {$i random.inc}
 {$i helpers.inc}
+{$i sound.inc}
+{$i fade.inc}
 {$i gui.inc}
 {$i board.inc}
 
@@ -152,10 +166,10 @@ begin
     oldRez := xbios_getrez;
     SavePalette(@oldPalette[0]);
     oldScreen := xbios_logbase;
-    SCREEN_LOG_RAW := gemdos_malloc(33280+256);
-    SCREEN_PHY_RAW := gemdos_malloc(33280+256);
-    SCREEN_0 := pointer(((PtrUInt(SCREEN_LOG_RAW) + 255) and $FFFFFF00) + 1280);
-    SCREEN_1 := pointer(((PtrUInt(SCREEN_PHY_RAW) + 255) and $FFFFFF00) + 1280);
+    SCREEN_LOG_RAW := gemdos_malloc(SCREEN_ALLOC_BYTES);
+    SCREEN_PHY_RAW := gemdos_malloc(SCREEN_ALLOC_BYTES);
+    AlignScreenBuffer(SCREEN_LOG_RAW, SCREEN_0);
+    AlignScreenBuffer(SCREEN_PHY_RAW, SCREEN_1);
     SCREEN_LOG := SCREEN_0;
     SCREEN_PHY := SCREEN_1;
     ClearScreen(SCREEN_LOG);
@@ -196,6 +210,7 @@ end;
 begin
     MUSIC := gemdos_malloc(30000);
     ScreenInit(0);
+    InitSound;
     current_tune := 0;
     quit := false;
     startingLevel :=1 ;
@@ -211,9 +226,10 @@ begin
         UnApl(@MUSICI, MUSIC);  
         SNDH_PlayTuneISR(MUSIC, 1);
         TitleScreen;
+        FadeToBlack(FADE_FRAMES);
         ClearScreen(SCREEN_LOG);
         SwapScreen;
-        LoadPalette;
+        xbios_setpalette(@ALL_BLACK);
         ClearScreen(SCREEN_LOG);
         SNDH_StopTuneISR;
       if not quit then begin  
@@ -225,6 +241,7 @@ begin
         SwapScreen;
         DrawBackground;
         DrawGui;
+        FadeToPalette(@palette[0], FADE_FRAMES);
         // main game loop
         repeat
           
@@ -242,7 +259,7 @@ begin
                     tileY := 0;
                     prevRotation1 := rotation;
                     prevRotation2 := rotation;
-                    if currentTile = 1 then dec(tileY);
+                    if currentTile = 1 then tileY := -1;
                     prevX1 := tileX;
                     prevY1 := tileY;
                     prevX2 := tileX;
@@ -281,10 +298,12 @@ begin
                     prevTile1 := currentTile;
                     if (key=KEY_LEFT) and CanMoveBlock(tileX-1,tileY,currentTile,rotation) then begin
                         tileX := tileX-1;
+                        PlayRotateSound;
                         pieceDirty := true;
                     end;
                     if (key=KEY_RIGHT) and CanMoveBlock(tileX+1,tileY,currentTile,rotation) then begin
                         tileX := tileX+1;
+                        PlayRotateSound;
                         pieceDirty := true;
                     end;
                     if (key=KEY_UP) then FastFall; // fall to bottom
@@ -301,10 +320,12 @@ begin
                     prevTile1 := currentTile;
                     if (actionKey=KEY_SPACE) and CanMoveBlock(tileX,tileY,currentTile,TPred(rotation)) then begin
                         rotation := TPred(rotation);
+                        PlayRotateSound;
                         pieceDirty := true;
                     end;
                     if (actionKey=KEY_ENTER) and CanMoveBlock(tileX,tileY,currentTile,TSucc(rotation)) then begin
                         rotation := TSucc(rotation);
+                        PlayRotateSound;
                         pieceDirty := true;
                     end;
                 end;
@@ -320,21 +341,22 @@ begin
             prevTile2 := currentTile;
 
             // check the floor
-            if CanMoveBlock(tileX,byte(tileY+1),currentTile,rotation) then
+            if CanMoveBlock(tileX,tileY+1,currentTile,rotation) then
                 begin
-                    tileY := byte(tileY+1);
+                    tileY := tileY+1;
                     pieceDirty := true;
                 end
             else
                 begin // tile hits the ground
                     crackCounter := CRACK_SOUND_LENGTH;
+                    PlayDropSound;
                     DrawBlock(tileX,tileY,currentTile,rotation);
                     CommitBlock(tileX,tileY,currentTile,rotation);
                     SwapScreen;
                     DrawBlock(tileX,tileY,currentTile,rotation);
                     SwapScreen;
                     CheckRows(tileY);
-                    if tileY=0 then key := KEY_ESC // game over
+                    if tileY<=0 then key := KEY_ESC // game over
                         else spawnTile:=true;
                 end;
         until (key = KEY_ESC);
@@ -358,6 +380,7 @@ begin
             Pause(1);
             inc(counter);
         until (counter=GAME_OVER_DELAY) or (actionKey=KEY_ENTER) or (actionKey=KEY_SPACE) or (key=KEY_ESC);
+        FadeToBlack(FADE_FRAMES);
         SNDH_StopTuneISR;
         key := 0;
 
@@ -365,6 +388,7 @@ begin
 
     until quit;
     SNDH_StopTuneISR;
+    DoneSound;
     Done();
 
 end.

@@ -1,6 +1,14 @@
 {$L unapl.o}
+{$L vbl.o}
+{$L screen.o}
 
 procedure UnApl(src, dst: pointer );external;  
+
+procedure AlignScreenBuffer(rawScreen: pointer; var screen: pword); external;
+
+function AddToVbl(callback: pointer): byte; external;
+
+function RemoveFromVbl(callback: pointer): byte; external;
 
 function TPred(rotation:byte): byte;
 begin
@@ -15,6 +23,11 @@ end;
 function Min(a,b:byte): byte;
 begin
     if (a<b) then Min:=a else Min:=b;
+end;
+
+function CellInsideWell(x,y:TCellCoord): boolean;
+begin
+    CellInsideWell := (x >= 0) and (x < WELL_WIDTH) and (y >= 0) and (y < WELL_HEIGHT);
 end;
 
 function GetPaddedInt(i:cardinal; p:byte): string;

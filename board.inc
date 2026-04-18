@@ -6,53 +6,41 @@ begin
     FillChar(rowCount, SizeOf(rowCount), 0);
 end;
 
-// procedure DrawBoard;
-// var x,y: byte;
-// begin
-//     x:=0;
-//     repeat
-//         y:=0;
-//         repeat
-//             SetLength(s,0);
-//             s := GetPaddedInt(board[x,y],2);
-//             NeoDrawRect(x*16,y*8,x*16+14,y*8+8,2);
-//             NeoDrawString(x*16,y*8,8,s);
-//             inc(y);
-//         until y=WELL_HEIGHT;
-//         inc(x);
-//     until x=WELL_WIDTH;
-// end;
-
-procedure ClearBlock(xp,yp,tiletype,rotation:byte);
-var x,y,i,cell: byte;
+procedure ClearBlock(xp,yp:TCellCoord; tiletype,rotation:byte);
+var x,y: TCellCoord;
+    i,cell: byte;
 begin
     for i := 0 to 3 do begin
         cell := tile_cells[rotation,tiletype,i];
-        x := byte(xp + (cell and $0f));
-        y := byte(yp + (cell shr 4));
-        ClearSquare(x,y);
+        x := xp + TCellCoord(cell and $0f);
+        y := yp + TCellCoord(cell shr 4);
+        if CellInsideWell(x,y) then
+            ClearSquare(x,y);
     end;
 end;
 
-procedure DrawBlock(xp,yp,tiletype,rotation:byte);
-var x,y,i,cell: byte;
+procedure DrawBlock(xp,yp:TCellCoord; tiletype,rotation:byte);
+var x,y: TCellCoord;
+    i,cell: byte;
 begin
     for i := 0 to 3 do begin
         cell := tile_cells[rotation,tiletype,i];
-        x := byte(xp + (cell and $0f));
-        y := byte(yp + (cell shr 4));
-        DrawSquare(x,y,tiletype+1);
+        x := xp + TCellCoord(cell and $0f);
+        y := yp + TCellCoord(cell shr 4);
+        if CellInsideWell(x,y) then
+            DrawSquare(x,y,tiletype+1);
     end;
 end;
 
-procedure CommitBlock(xp,yp,tiletype,rotation:byte);
-var x,y,i,cell: byte;
+procedure CommitBlock(xp,yp:TCellCoord; tiletype,rotation:byte);
+var x,y: TCellCoord;
+    i,cell: byte;
 begin
     for i := 0 to 3 do begin
         cell := tile_cells[rotation,tiletype,i];
-        x := byte(xp + (cell and $0f));
-        y := byte(yp + (cell shr 4));
-        if (x < WELL_WIDTH) and (y < WELL_HEIGHT) then begin
+        x := xp + TCellCoord(cell and $0f);
+        y := yp + TCellCoord(cell shr 4);
+        if CellInsideWell(x,y) then begin
             if board[x,y] = 0 then
                 Inc(rowCount[y]);
             board[x,y] := tiletype+1;
@@ -60,26 +48,20 @@ begin
     end;
 end;
 
-function CanMoveBlock(xp,yp,tiletype,rotation:byte): boolean;
-var x,y,i,cell: byte;
+function CanMoveBlock(xp,yp:TCellCoord; tiletype,rotation:byte): boolean;
+var x,y: TCellCoord;
+    i,cell: byte;
     canMove: boolean;
-    localYp: byte;       // ← nowa lokalna zmienna
 begin
     canMove := true;
-    localYp := yp;       // ← kopia parametru
-
-    if (localYp>WELL_HEIGHT) and (rotation > 0) then begin // I tile type fix
-        Inc(localYp);    // ← modyfikuje TYLKO lokalną kopię
-    end;
-
     i := 0;
     repeat
         cell := tile_cells[rotation,tiletype,i];
-        x := byte(xp + (cell and $0f));
-        y := byte(localYp + (cell shr 4));
-        if (x > WELL_WIDTH-1) then canMove := false;
-        if (y > WELL_HEIGHT-1) then canMove := false;
-        if canMove and (board[x,y] <> 0) then canMove := false;
+        x := xp + TCellCoord(cell and $0f);
+        y := yp + TCellCoord(cell shr 4);
+        if (x < 0) or (x >= WELL_WIDTH) then canMove := false;
+        if (y >= WELL_HEIGHT) then canMove := false;
+        if canMove and (y >= 0) and (board[x,y] <> 0) then canMove := false;
         inc(i);
     until (i=4) or (not canMove);
 
@@ -108,30 +90,53 @@ begin
     end;
 end;
 
-procedure DeleteRow(yr:byte);
-var x,y,freelines: byte;
+procedure DeleteRows(var rows: array of byte; linecount: byte);
+var
+    x: byte;
+    src,dst,deletedIndex: smallint;
 begin
-    freelines := 0;
-    for y:=yr downto 2 do begin
-        rowCount[y] := rowCount[y-1];
-        for x:=0 to WELL_WIDTH-1 do
-            board[x,y] := board[x,y-1];
-        if rowCount[y]=0 then begin
-            Inc(freelines);
-            if freelines>3 then exit;
+    src := WELL_HEIGHT - 1;
+    deletedIndex := linecount - 1;
+
+    for dst := WELL_HEIGHT - 1 downto 0 do begin
+        while (src >= 0) and (deletedIndex >= 0) and (src = rows[deletedIndex]) do begin
+            Dec(src);
+            Dec(deletedIndex);
+        end;
+
+        if src >= 0 then begin
+            rowCount[dst] := rowCount[src];
+            for x:=0 to WELL_WIDTH-1 do
+                board[x,dst] := board[x,src];
+            Dec(src);
+        end else begin
+            rowCount[dst] := 0;
+            for x:=0 to WELL_WIDTH-1 do
+                board[x,dst] := 0;
         end;
     end;
 end;
 
-procedure CheckRows(yr:byte);
-var x,y: byte;
+procedure CheckRows(yr:TCellCoord);
+var x,y,firstRow,lastRow: byte;
     rows: array [0..3] of byte;
     i,linecount: byte;
     bonus:cardinal;
 
 begin
     linecount := 0;
-    for y:=yr to Min(yr+4, WELL_HEIGHT-1) do
+    if yr < 0 then
+        firstRow := 0
+    else
+        firstRow := yr;
+    if yr + 4 > WELL_HEIGHT-1 then
+        lastRow := WELL_HEIGHT-1
+    else if yr + 4 < 0 then
+        lastRow := 0
+    else
+        lastRow := yr + 4;
+
+    for y:=firstRow to lastRow do
         begin
             if rowCount[y] = WELL_WIDTH then
                 begin
@@ -177,14 +182,20 @@ begin
     end;
 
     // fall down rows
-    for i:=1 to linecount do begin
-        y:=rows[i-1];
-        DeleteRow(y);
+    if linecount > 0 then begin
+        y:=rows[linecount-1];
+        DeleteRows(rows, linecount);
         DrawRowsAfterDelete(y);
         SwapScreen;
         DrawRowsAfterDelete(y);
-        ShakeScreen;
+{$IFNDEF STE}
+        ShakeScreen(1);
+{$ENDIF}
     end;
+{$IFDEF STE}
+    if linecount > 0 then
+        ShakeScreen(linecount);
+{$ENDIF}
 
     // check if level goal reached
     if ( levelLines>=lines2levelup )then
@@ -205,25 +216,23 @@ begin
 end;
 
 procedure FastFall;
-var targetY: byte;
+var targetY: TCellCoord;
 begin
-    // Wyczyść stare pozycje
     ClearBlock(prevX1,prevY1,prevTile1,prevRotation1);
     ClearBlock(prevX2,prevY2,prevTile2,prevRotation2);
     SwapScreen;
     ClearBlock(prevX1,prevY1,prevTile1,prevRotation1);
     ClearBlock(prevX2,prevY2,prevTile2,prevRotation2);
 
-    // Znajdź docelową pozycję
     targetY := tileY;
     while CanMoveBlock(tileX, targetY + 1, currentTile, rotation) do
         Inc(targetY);
     tileY := targetY;
 
-    // Narysuj klocek na obu ekranach
     DrawBlock(tileX, tileY, currentTile, rotation);
     SwapScreen;
     DrawBlock(tileX, tileY, currentTile, rotation);
+    PlayDropSound;
 
     pieceDirty := false;
     fallcounter := 0;
