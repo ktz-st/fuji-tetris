@@ -306,12 +306,16 @@ begin
                         PlayRotateSound;
                         pieceDirty := true;
                     end;
-                    if (key=KEY_UP) then FastFall; // fall to bottom
-                    if (key=KEY_DOWN) then fallcounter := 0; // fall one row
-                    if (key=KEY_P) then PauseGame; // Pause
-                    if (key=KEY_M) then ToggleMusic; // Music on/off
-                    if (key=KEY_NEXT) and music_on then NextTune;
-                    if (key=KEY_PREVIOUS) and music_on then PreviousTune;
+                    if (key=KEY_UP) then begin
+                        FastFall; // fall to bottom
+                        actionKey := 0;
+                    end else begin
+                        if (key=KEY_DOWN) then fallcounter := 0; // fall one row
+                        if (key=KEY_P) then PauseGame; // Pause
+                        if (key=KEY_M) then ToggleMusic; // Music on/off
+                        if (key=KEY_NEXT) and music_on then NextTune;
+                        if (key=KEY_PREVIOUS) and music_on then PreviousTune;
+                    end;
                 end;
                 if actionKey<>0 then begin
                     prevX1 := tileX;

@@ -73,12 +73,14 @@ var x,y,freelines: byte;
     freerow: boolean;
 begin
     freelines := 0;
-    for y:=yr downto 2 do begin
+    // pętla MUSI dojść do y=0, inaczej po skasowaniu linii zostają
+    // duchy z klocków, które miały komórki w wierszach 0/1 (np. T-shape).
+    for y:=yr downto 0 do begin
         freerow := true;
         for x:=0 to WELL_WIDTH-1 do begin
             if ( board[x,y]=0 ) then begin
                 ClearSquare(x,y);
-            end else begin  
+            end else begin
                 DrawSquare(x,y,board[x,y]);
                 freerow := false;
             end;
@@ -86,6 +88,11 @@ begin
         if freerow then begin
             Inc(freelines);
             if freelines>3 then exit;
+        end else begin
+            // reset licznika kolejnych pustych wierszy, żeby
+            // optymalizacja liczyła SĄSIADUJĄCE puste wiersze,
+            // a nie sumę pustych w całym przebiegu.
+            freelines := 0;
         end;
     end;
 end;
@@ -218,11 +225,13 @@ end;
 procedure FastFall;
 var targetY: TCellCoord;
 begin
-    ClearBlock(prevX1,prevY1,prevTile1,prevRotation1);
-    ClearBlock(prevX2,prevY2,prevTile2,prevRotation2);
+    ClearBlock(prevX1, prevY1, prevTile1, prevRotation1);
+    ClearBlock(prevX2, prevY2, prevTile2, prevRotation2);
+    ClearBlock(tileX, tileY, currentTile, rotation);
     SwapScreen;
-    ClearBlock(prevX1,prevY1,prevTile1,prevRotation1);
-    ClearBlock(prevX2,prevY2,prevTile2,prevRotation2);
+    ClearBlock(prevX1, prevY1, prevTile1, prevRotation1);
+    ClearBlock(prevX2, prevY2, prevTile2, prevRotation2);
+    ClearBlock(tileX, tileY, currentTile, rotation);
 
     targetY := tileY;
     while CanMoveBlock(tileX, targetY + 1, currentTile, rotation) do
