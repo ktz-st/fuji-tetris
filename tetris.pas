@@ -97,6 +97,14 @@ var
 {$ENDIF}
     counter: word;
 
+procedure VSync;
+var
+    vbl: longword;
+begin
+    vbl := PLongWord(pointer(longword($00000466)))^;
+    while PLongWord(pointer(longword($00000466)))^ = vbl do ;
+end;
+
 {$i random.inc}
 {$i helpers.inc}
 {$i sound.inc}
@@ -287,7 +295,7 @@ begin
                     DrawBlock(tileX,tileY,currentTile,rotation);
                     pieceDirty := false;
                 end else begin
-                    xbios_vsync;
+                    VSync;
                 end;
                 dec(fallcounter);
                 GetUserInput;
@@ -318,10 +326,16 @@ begin
                     end;
                 end;
                 if actionKey<>0 then begin
-                    prevX1 := tileX;
-                    prevY1 := tileY;
-                    prevRotation1 := rotation;
-                    prevTile1 := currentTile;
+                    // jeśli w tej samej iteracji odpalił się key handler, prev1
+                    // już trzyma WIDOCZNĄ (starą) pozycję — nie nadpisujemy go
+                    // przesuniętym tileX, bo inaczej ClearBlock w następnej
+                    // klatce wyczyści złe miejsce i zostawi ducha klocka.
+                    if key = 0 then begin
+                        prevX1 := tileX;
+                        prevY1 := tileY;
+                        prevRotation1 := rotation;
+                        prevTile1 := currentTile;
+                    end;
                     if (actionKey=KEY_SPACE) and CanMoveBlock(tileX,tileY,currentTile,TPred(rotation)) then begin
                         rotation := TPred(rotation);
                         PlayRotateSound;

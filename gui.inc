@@ -43,6 +43,23 @@ begin
         palette[i]:=xbios_setcolor(i,-1);
 end;
 
+procedure SetPhysicalScreen(screen: pword);
+var
+    addr: longword;
+begin
+    if screen = nil then exit;
+    addr := longword(screen);
+    PByte(pointer(longword($FFFF8201)))^ := byte(addr shr 16);
+    PByte(pointer(longword($FFFF8203)))^ := byte(addr shr 8);
+    PByte(pointer(longword($FFFF820D)))^ := byte(addr);
+end;
+
+procedure SetLogicalScreen(screen: pword);
+begin
+    if screen = nil then exit;
+    PLongWord(pointer(longword($0000044E)))^ := longword(screen);
+end;
+
 procedure SwapScreen;
 var
     SCREEN_TMP: pword;
@@ -50,8 +67,9 @@ begin
     SCREEN_TMP := SCREEN_LOG;
     SCREEN_LOG := SCREEN_PHY;
     SCREEN_PHY := SCREEN_TMP;
-    xbios_setscreen(SCREEN_LOG, SCREEN_PHY, -1);
-    xbios_vsync;
+    SetLogicalScreen(SCREEN_LOG);
+    SetPhysicalScreen(SCREEN_PHY);
+    VSync;
 end;
 
 procedure ClearScreen(address: pword);
@@ -66,11 +84,11 @@ var
 begin
     for i:=0 to 11 do begin
         xbios_setcolor(0, bg_color[i]);
-        xbios_vsync;
+        VSync;
     end;
     for i:=11 downto 0 do begin
         xbios_setcolor(0, bg_color[i]);
-        xbios_vsync;
+        VSync;
     end;
 end;
 
@@ -92,14 +110,17 @@ begin
 {$ENDIF}
     PlayShakeSound(level);
 {$IFDEF STE}
-    xbios_setscreen(SCREEN_LOG, SCREEN_PHY - shakeWords, -1);
-    xbios_vsync;
+    SetLogicalScreen(SCREEN_LOG);
+    SetPhysicalScreen(SCREEN_PHY - shakeWords);
+    VSync;
 
-    xbios_setscreen(SCREEN_LOG, SCREEN_PHY + shakeWords, -1);
-    xbios_vsync;
+    SetLogicalScreen(SCREEN_LOG);
+    SetPhysicalScreen(SCREEN_PHY + shakeWords);
+    VSync;
 
-    xbios_setscreen(SCREEN_LOG, SCREEN_PHY, -1);
-    xbios_vsync;
+    SetLogicalScreen(SCREEN_LOG);
+    SetPhysicalScreen(SCREEN_PHY);
+    VSync;
 {$ELSE}
     SCREEN_LOG := SCREEN_LOG - shakeWords;
     SwapScreen;

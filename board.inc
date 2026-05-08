@@ -184,7 +184,7 @@ begin
             y:=rows[i-1];
             ClearSquarePhy(x,y);
             ClearSquarePhy(WELL_WIDTH-1-x,y);
-            xbios_vsync;
+            VSync;
         end;
     end;
 
