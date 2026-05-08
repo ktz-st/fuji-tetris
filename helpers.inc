@@ -75,5 +75,5 @@ end;
 procedure Pause(count: word);
 var i: word;
 begin
-    for i:=0 to count do xbios_vsync;
+    for i:=0 to count do VSync;
 end;
